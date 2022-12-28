@@ -18,18 +18,17 @@ class Promoter(WorkWeekMixin):
         if tg_id not in cls._instanse_cache:
             promoter = await cls.create(tg_id)
             cls._instanse_cache[tg_id] = promoter
+            cls._instanse_cache[promoter._vr_code] = promoter
         return cls._instanse_cache[tg_id]
 
     @classmethod
     async def get_by_vr(cls, vr_code: str) -> Promoter:
-        for _, promoter in cls._instanse_cache.items():
-            if promoter._vr_code == vr_code:
-                return promoter
-
-        promoter = await cls.create(vr_code=vr_code)
-        if promoter._tg_id:
-            cls._instanse_cache[promoter._tg_id] = promoter
-        return promoter
+        if vr_code not in cls._instanse_cache:
+            promoter = await cls.create(vr_code=vr_code)
+            cls._instanse_cache[vr_code] = promoter
+            if promoter._tg_id:
+                cls._instanse_cache[promoter._tg_id] = promoter
+        return cls._instanse_cache[vr_code]
 
     @classmethod
     async def create(cls, tg_id: str = None, vr_code: str = None) -> Promoter:
@@ -41,8 +40,15 @@ class Promoter(WorkWeekMixin):
         self._tg_id: str = promoter_dict.get(ConnectorBitrix.TG_ID)
         self._vr_code: str = promoter_dict.get(ConnectorBitrix.REF_CODE)
         self._city: str = promoter_dict.get(ConnectorBitrix.CITY)
+        self._last_name: str = promoter_dict.get(ConnectorBitrix.LAST_NAME)
+        self._name: str = promoter_dict.get(ConnectorBitrix.NAME)
+        self._second_name: str = promoter_dict.get(ConnectorBitrix.SECOND_NAME)
         logger.info(f'Promoter {self._vr_code} was created')
         return self
+
+    @classmethod
+    async def clear_cache(cls):
+        cls._instanse_cache.clear()
 
     def __init__(self) -> None:
         pass
@@ -59,6 +65,16 @@ class Promoter(WorkWeekMixin):
 
     async def get_tg_id(self) -> str:
         return self._tg_id
+
+    async def get_name(self, short: bool = False) -> str:
+        list_name = [self._last_name, self._name, self._second_name]
+        if not short or None in list_name:
+            return ' '.join([word for word in list_name if word])
+        else:
+            return (
+                f'{self._last_name}'
+                f'{self._name[0]}. {self._second_name[0]}.'
+            )
 
     async def is_region(self) -> bool:
         if self._city == 'Санкт-Петербург':

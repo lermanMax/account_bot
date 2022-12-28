@@ -52,6 +52,10 @@ class Manager(WorkWeekMixin):
             cls._instanse_cache[manager._tg_id] = manager
         return manager
 
+    @classmethod
+    async def clear_cache(cls):
+        cls._instanse_cache.clear()
+
     def __init__(self) -> None:
         pass
 
@@ -89,6 +93,18 @@ class Manager(WorkWeekMixin):
                 promoter_dict.get(ConnectorBitrix.REF_CODE))
         return vr_list
 
+    async def get_promoters(self) -> List:
+        """Получить промоутеров этого менеджера
+
+        Returns:
+            List: [ Promoter, ... ]
+        """
+        vr_list = await self.get_vr_list_promoters()
+
+        tasks = [Promoter.get_by_vr(vr_code) for vr_code in vr_list]
+        promoters = await asyncio.gather(*tasks)
+        return promoters
+
     async def get_count_of_sales(
         self, start_date: datetime, end_date: datetime
     ):
@@ -123,15 +139,16 @@ class Manager(WorkWeekMixin):
         Returns:
             List: [ (Promoter, count), ... ]
         """
-        vr_list = await self.get_vr_list_promoters()
+        promoters = await self.get_promoters()
         day = datetime.today()
-        result_list = []
-        for vr_code in vr_list:
-            promoter: Promoter = await Promoter.get_by_vr(vr_code)
+
+        async def make_tuple(promoter):
             sales_dict = await promoter.get_count_of_sales(start_date=day)
-            result_list.append(
-                (promoter, sales_dict[day.date()])
-            )
+            return (promoter, sales_dict[day.date()])
+
+        tasks = [make_tuple(promoter) for promoter in promoters]
+        result_list = await asyncio.gather(*tasks)
+
         return result_list
 
     async def get_count_of_sales_on_this_week(self) -> Dict:

@@ -1,8 +1,9 @@
 import asyncio
 import aiohttp
 from typing import List
-
+from datetime import date
 from loguru import logger
+
 from fast_bitrix24 import BitrixAsync
 
 
@@ -37,6 +38,9 @@ class ConnectorBitrix:
     PHONE = 'PHONE'
     REF_CODE = 'REF_CODE'
     TG_ID = 'TG_ID'
+    ENTRY_DATE = 'ENTRY_DATE'  # Дата первого касания (бот)
+    INVITER_VR = 'INVITER_VR'  # Реферальный код приглашающего
+    TRAFIC_SOURCE = 'TRAFIC_SOURCE'  # Источник трафика (HR)
     NAME = 'NAME'
     SECOND_NAME = 'SECOND_NAME'
     LAST_NAME = 'LAST_NAME'
@@ -53,6 +57,8 @@ class ConnectorBitrix:
     BUSINESS = 'BUSINESS'
     OFFER_ACCEPT = 'OFFER_ACCEPT'
     CONF_ACCEPT = 'CONF_ACCEPT'
+    # Условия выплаты партнёрского вознаграждения
+    PARTNER_PRIZE_ACCEPT = 'PARTNER_PRIZE_ACCEPT'
 
     # Перевод названия полей для лидов (с человеческого на битриксойдный)
     field_lead = {
@@ -60,6 +66,12 @@ class ConnectorBitrix:
         CITY: 'UF_CRM_CITYPARTNER',
         NAME_PARTNER: 'UF_CRM_NAMEPARTNER',
         FORM_NAME: 'UF_CRM_FORMNAME',
+        OFFER_ACCEPT: 'UF_CRM_DOGOVOR',
+        CONF_ACCEPT: 'UF_CRM_POLITIKA',
+        PARTNER_PRIZE_ACCEPT: 'UF_CRM_1670586101',
+        ENTRY_DATE: 'UF_CRM_1670586695',
+        INVITER_VR: 'UF_CRM_1670586181',
+        TRAFIC_SOURCE: 'UF_CRM_1670586226',
     }
 
     # Перевод полей для сделок
@@ -77,6 +89,10 @@ class ConnectorBitrix:
         BUSINESS: 'UF_CRM_62A0754067D60',
         OFFER_ACCEPT: 'UF_CRM_629F76E3C1519',
         CONF_ACCEPT: 'UF_CRM_62A1E7A4A3F61',
+        PARTNER_PRIZE_ACCEPT: 'UF_CRM_63931F5AB1F1D',
+        ENTRY_DATE: 'UF_CRM_63932154A4E50',
+        INVITER_VR: 'UF_CRM_63931F5A9327E',
+        TRAFIC_SOURCE: 'UF_CRM_63931FB7819D1',
     }
 
     # Перевод полей для контакта
@@ -100,14 +116,16 @@ class ConnectorBitrix:
 
     # Поля которые указываются на этапе создания лида
     fields_for_lead_registration = [
-        NAME, SECOND_NAME, LAST_NAME, EMAIL, CITY]
+        CONF_ACCEPT, INVITER_VR, TRAFIC_SOURCE, NAME, SECOND_NAME, LAST_NAME,
+        EMAIL, CITY
+    ]
     # Поля которые указываются на этапе создания сделки
     fields_for_deal_registration = [
-        MANAGER_REF_CODE, INN, BIK, RSCHET]
+        OFFER_ACCEPT, PARTNER_PRIZE_ACCEPT, MANAGER_REF_CODE, INN, BIK, RSCHET]
 
     # Поля которые надо вернуть по промоутеру
     fields_for_promoter = [
-        REF_CODE, TG_ID, CITY, MANAGER_ID, RSCHET]
+        REF_CODE, TG_ID, CITY, MANAGER_ID, RSCHET, NAME, SECOND_NAME, LAST_NAME]
 
     # Поля которые надо вернуть по менеджеру
     fields_for_manager = [
@@ -212,9 +230,11 @@ class ConnectorBitrix:
     async def _add_lead(
         self,
         tg_id: str,
-        phone: str
+        phone: str,
+        entry_date: date,
     ):
         tg_field = self.field_lead.get(self.TG_ID)
+        date_field = self.field_lead.get(self.ENTRY_DATE)
         result = await self.bitx.call(
             'crm.lead.add',
             {
@@ -226,6 +246,7 @@ class ConnectorBitrix:
                         'VALUE_TYPE': 'OTHER'
                     }],
                     tg_field: tg_id,
+                    date_field: entry_date,
                 }
             }
         )
@@ -384,7 +405,7 @@ class ConnectorBitrix:
         if len(all_deals) == 1:
             return all_deals[0]
         elif len(all_deals) == 0:
-            return
+            raise EmployeeDoesNotExist
         elif len(all_deals) > 1:
             raise DatabaseError
 
@@ -436,7 +457,10 @@ class ConnectorBitrix:
     async def add_promoter(
         self,
         tg_id: str,
-        phone: str
+        phone: str,
+        entry_date: date,
+        inviter_vr: str = None,
+        link_name: str = None,
     ):
         """Отправить новый номер телефона и тг,
         чтобы создать нового лида промоутера
@@ -444,16 +468,23 @@ class ConnectorBitrix:
         Args:
             tg_id (str): id telegram
             phone (str): телефон
+            entry_date: дата первого входа в бота,
+            inviter_vr: REF_CODE приглашающего,
+            link_name: имя диплинка по которму зашел юзер (источник трафика),
 
         Raises:
-            EmployeeAlreadyExist: Уже есть промоутер с такои номером и айди
+            EmployeeAlreadyExist: Уже есть промоутер с таким номером и айди
             PhoneAlreadyTaken: Номер занят другим промоутером
 
         Returns:
             None: Успешно создан
         """
         logger.info(f'tg={tg_id} phone={phone}')
-        promoter = await self._get_promoter_by_phone(phone)
+        try:
+            promoter = await self._get_promoter_by_phone(phone)
+        except EmployeeDoesNotExist:
+            promoter = None
+
         if promoter:
             tg_id_from_contact = promoter.get(self.field_deal.get('TG_ID'))
             if tg_id_from_contact:
@@ -469,9 +500,40 @@ class ConnectorBitrix:
                     tg_id=tg_id
                 )
                 raise EmployeeAlreadyExist
+
+        try:
+            promoter_lead = await self._get_lead(tg_id=tg_id)
+        except EmployeeDoesNotExist:
+            promoter_lead = None
+
+        if promoter_lead:
+            await self._update_lead(
+                tg_id=tg_id,
+                field_name=self.PHONE,
+                value=phone
+            )
+            await self._update_lead(
+                tg_id=tg_id,
+                field_name=self.ENTRY_DATE,
+                value=entry_date
+            )
         else:
-            await self._add_lead(tg_id, phone)
-            return None
+            await self._add_lead(tg_id, phone, entry_date)
+
+        if inviter_vr:
+            await self.update_promoter(
+                tg_id=tg_id,
+                field_name=self.INVITER_VR,
+                value=inviter_vr
+            )
+
+        if link_name:
+            await self.update_promoter(
+                tg_id=tg_id,
+                field_name=self.TRAFIC_SOURCE,
+                value=link_name
+            )
+        return None
 
     async def update_promoter(
         self,
@@ -479,18 +541,7 @@ class ConnectorBitrix:
         field_name: str,
         value: str
     ):
-        """Для обновления полей:
-
-        NAME = 'NAME'
-        SECOND_NAME = 'SECOND_NAME'
-        LAST_NAME = 'LAST_NAME'
-        EMAIL = 'EMAIL'
-        CITY = 'CITY'
-        MANAGER_REF_CODE = 'MANAGER_REF_CODE'
-        BANK_NAME = 'BANK_NAME'
-        BIK = 'BIK'
-        INN = 'INN'
-        RSCHET = 'RSCHET'
+        """Для обновления полей
 
         Args:
             field_name (str): название поля
@@ -532,8 +583,14 @@ class ConnectorBitrix:
         Returns:
             dict: {
                 'REF_CODE': 'vr0000',
+                'TG_ID': str,
+                'CITY': str,
+                'MANAGER_ID': str,
+                'RSCHET': str,
             }
-            None - промоутера нет, или не заполнил до конца все поля
+
+            EmployeeDoesNotExist
+            DatabaseError
         """
         dict_deal = await self._get_deal_promoter(
             tg_id=tg_id,
@@ -544,10 +601,17 @@ class ConnectorBitrix:
             promoter[field] = dict_deal.get(self.field_deal.get(field))
 
         # проверка что все поля заполнены = стажер стал промоутером
-        if promoter[self.RSCHET]:
-            return promoter
-        else:
+        if not promoter[self.RSCHET]:
             raise EmployeeDoesNotExist
+
+        contact_id = dict_deal.get('CONTACT_ID')
+        contacts = await self._get_contact('ID', contact_id)
+        contact = contacts[0]
+        promoter[self.LAST_NAME] = contact.get(self.LAST_NAME)
+        promoter[self.NAME] = contact.get(self.NAME)
+        promoter[self.SECOND_NAME] = contact.get(self.SECOND_NAME)
+
+        return promoter
 
     async def get_manager(
             self, tg_id: str = None, ref_code: str = None) -> dict:
@@ -587,18 +651,28 @@ async def example():
     webhook_b = 'https://int-active.bitrix24.ru/rest/193/i3qfdc3z8jygp5pp/'
     await ConnectorBitrix.setup(webhook_b)
     cn = ConnectorBitrix()
-    tg_id = '98244574'
-    await cn._get_manager(ref_code='vr0011')
-    await cn._get_deal_promoter(ref_code='vr0011')
-    # await cn.add_promoter(tg_id, '79112394108')
-    # await cn.update_promoter(tg_id, cn.NAME, 'Макс')
-    # await cn.update_promoter(tg_id, cn.SECOND_NAME, 'Максимович')
-    # await cn.update_promoter(tg_id, cn.LAST_NAME, 'Максов')
-    # await cn.update_promoter(tg_id, cn.EMAIL, 'lermanma@gmail.com')
-    # await cn.update_promoter(tg_id, cn.CITY, 'Санкт-Петербург')
 
-    # await cn.ready_for_approve(tg_id)  # Когда закончили первую часть реги
+    tg_id = '1111'
+    inviter_promoter_dict = await cn.get_promoter(tg_id='98244574')
+    await cn.add_promoter(
+        tg_id=tg_id,
+        phone='+777777888',
+        entry_date=date(2022, 12, 12),
+        inviter_vr=inviter_promoter_dict.get(cn.REF_CODE),
+        link_name='Тест трафик hr'
+        )
 
+    await cn.update_promoter(tg_id, cn.CONF_ACCEPT, 'yes')  # Политика
+    await cn.update_promoter(tg_id, cn.NAME, 'Макс')
+    await cn.update_promoter(tg_id, cn.SECOND_NAME, 'Максимович')
+    await cn.update_promoter(tg_id, cn.LAST_NAME, 'Максов')
+    await cn.update_promoter(tg_id, cn.EMAIL, 'lermanma@gmail.com')
+    await cn.update_promoter(tg_id, cn.CITY, 'Санкт-Петербург')
+
+    await cn.ready_for_approve(tg_id)  # Когда закончили первую часть реги
+
+    await cn.update_promoter(tg_id, cn.OFFER_ACCEPT, 'yes')  # Договор оферт
+    await cn.update_promoter(tg_id, cn.PARTNER_PRIZE_ACCEPT, 'yes')  # Условия выплат
     await cn.update_promoter(tg_id, cn.MANAGER_REF_CODE, 'vr11111')
     await cn.update_promoter(tg_id, cn.BIK, '999999999')
     await cn.update_promoter(tg_id, cn.INN, '120000000000')

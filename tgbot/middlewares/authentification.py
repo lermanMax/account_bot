@@ -18,7 +18,7 @@ class AccessMiddleware(BaseMiddleware):
         user_from_tg = types.User.get_current()
         tg_id = user_from_tg.id
         logger.info(f'user_from_tg: {tg_id}')
-
+        load_answer = await message.answer('Загружаю...')
         try:
             promoter = await Promoter.get(str(tg_id))
         except EmployeeDoesNotExist:
@@ -55,3 +55,5 @@ class AccessMiddleware(BaseMiddleware):
         if isinstance(manager, Manager):
             logger.info(f'manager: {await manager.get_vr_code()}')
         data['manager'] = manager
+
+        await load_answer.delete()

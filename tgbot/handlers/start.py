@@ -18,6 +18,7 @@ async def start_menu_handler(
 
     text = (
         f'Вы успешно авторизированы \n'
+        f'ФИО: {await promoter.get_name()}\n'
         f'Ваш vr код: {await promoter.get_vr_code()}\n'
         f'Ваша должность: {role_name}\n'
     )
