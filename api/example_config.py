@@ -1,0 +1,10 @@
+TGBOT_TOKEN: str = ''
+TG_ADMINS_ID: list = [, ]
+
+BITRIX_WEBHOOK = ''
+
+SALES_DB_HOST = ''
+SALES_DB_PORT = 
+SALES_DB_USER = ''
+SALES_DB_PASS = ''
+SALES_DB_NAME = ''
