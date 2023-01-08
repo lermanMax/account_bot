@@ -1,5 +1,5 @@
 from typing import List, Tuple
-from salary_rates import *  # reconsider
+from .salary_rates import *  # reconsider
 
 
 def manager_salary(sales_number: List[int], is_regional: bool) -> Tuple[float, float]:
@@ -63,13 +63,16 @@ def agent_salary(sales_number: List[int], is_regional: bool, is_new: bool) -> Tu
                 agent_ticket_prices = OLDER_AGENT_LVL15_TICKET_PRICES
 
     every_day_sales = []
+    min_sales = min(sales_number)
 
-    for n in sales_number:
-        if n >= AGENT_RATES['rate2']:
+    if min_sales >= AGENT_RATES['rate2']:
+        for n in sales_number:
             every_day_sales.append(n * agent_ticket_prices['rate2'])
-        elif n < AGENT_RATES['rate1']:
+    elif min_sales < AGENT_RATES['rate1']:
+        for n in sales_number:
             every_day_sales.append(n * agent_ticket_prices['rate0'])
-        else:
+    else:
+        for n in sales_number:
             every_day_sales.append(n * agent_ticket_prices['rate1'])
 
     return sum(every_day_sales), every_day_sales[-1]
