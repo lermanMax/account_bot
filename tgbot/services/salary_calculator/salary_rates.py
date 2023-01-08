@@ -38,15 +38,10 @@ AGENT_RATES = {'rate0': 0,
                'rate2': 15,
                }
 
-OLDER_AGENT_WEEKLY_SALES = {'lvl15': 0,
-                            'lvl50': 60,
-                            'lvl99': 70,
-                            }
-
-NEWER_AGENT_WEEKLY_SALES = {'lvl15': 0,
-                            'lvl50': 60,
-                            'lvl99': 80,
-                            }
+WEEKLY_SALES = {'lvl15': 0,
+                'lvl50': 60,
+                'lvl99': 80,
+                }
 
 OLDER_AGENT_LVL15_TICKET_PRICES = {'rate0': 150,
                                    'rate1': 170,

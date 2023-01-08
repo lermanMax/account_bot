@@ -1,5 +1,5 @@
 from typing import List, Tuple
-from .salary_rates import *  # reconsider
+from salary_rates import *  # reconsider
 
 
 def manager_salary(sales_number: List[int], is_regional: bool) -> Tuple[float, float]:
@@ -37,18 +37,17 @@ def agent_salary(sales_number: List[int], is_regional: bool, is_new: bool) -> Tu
     sales_sum = sum(sales_number[:])
 
     if is_new:
-        agent_weekly_sales = NEWER_AGENT_WEEKLY_SALES
         if is_regional:
-            if sales_sum >= agent_weekly_sales['lvl99']:
+            if sales_sum >= WEEKLY_SALES['lvl99']:
                 agent_ticket_prices = REGIONAL_AGENT_LVL99_TICKET_PRICES
-            elif sales_sum >= agent_weekly_sales['lvl50']:
+            elif sales_sum >= WEEKLY_SALES['lvl50']:
                 agent_ticket_prices = REGIONAL_AGENT_LVL50_TICKET_PRICES
             else:
                 agent_ticket_prices = REGIONAL_AGENT_LVL15_TICKET_PRICES
         else:
-            if sales_sum >= agent_weekly_sales['lvl99']:
+            if sales_sum >= WEEKLY_SALES['lvl99']:
                 agent_ticket_prices = REGULAR_AGENT_LVL99_TICKET_PRICES
-            elif sales_sum >= agent_weekly_sales['lvl50']:
+            elif sales_sum >= WEEKLY_SALES['lvl50']:
                 agent_ticket_prices = REGULAR_AGENT_LVL50_TICKET_PRICES
             else:
                 agent_ticket_prices = REGULAR_AGENT_LVL15_TICKET_PRICES
@@ -56,10 +55,9 @@ def agent_salary(sales_number: List[int], is_regional: bool, is_new: bool) -> Tu
         if is_regional:
             raise Exception
         else:
-            agent_weekly_sales = OLDER_AGENT_WEEKLY_SALES
-            if sales_sum >= agent_weekly_sales['lvl99']:
+            if sales_sum >= WEEKLY_SALES['lvl99']:
                 agent_ticket_prices = OLDER_AGENT_LVL99_TICKET_PRICES
-            elif sales_sum >= agent_weekly_sales['lvl50']:
+            elif sales_sum >= WEEKLY_SALES['lvl50']:
                 agent_ticket_prices = OLDER_AGENT_LVL50_TICKET_PRICES
             else:
                 agent_ticket_prices = OLDER_AGENT_LVL15_TICKET_PRICES
