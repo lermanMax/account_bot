@@ -14,4 +14,4 @@ class TGBot:
         uri = cls.URL_SEND_MESSAGE.format(cls.TGBOT_TOKEN, user_id, message)
         with requests.post(uri) as _:
             pass
-        logger.debug(f'Send message to user # {user_id}: {message}')
+        logger.debug(f'Send message to user # {user_id}: {message[:10]}...')
