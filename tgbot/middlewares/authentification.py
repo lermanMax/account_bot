@@ -38,6 +38,7 @@ class AccessMiddleware(BaseMiddleware):
         else:
             await message.answer('Пройдите регистрацию')
             CancelHandler()
+            return
 
         try:
             manager = await Manager.get(str(tg_id))

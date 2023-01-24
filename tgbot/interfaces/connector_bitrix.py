@@ -654,6 +654,7 @@ async def example():
 
     tg_id = '1111'
     inviter_promoter_dict = await cn.get_promoter(tg_id='98244574')
+    await cn.get_manager(ref_code='vr33909')
     await cn.add_promoter(
         tg_id=tg_id,
         phone='+777777888',

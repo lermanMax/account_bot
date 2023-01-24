@@ -4,8 +4,10 @@ from typing import List, Dict
 from datetime import datetime, timedelta
 from loguru import logger
 
-from tgbot.interfaces.connector_sales_base import ConnectorSalesBase, SaleEntry
+from tgbot.interfaces.connector_sales_base import ConnectorSalesBase, \
+    SaleEntry
 from tgbot.interfaces.connector_bitrix import ConnectorBitrix
+from tgbot.interfaces.convert import entry_to_tickets
 from tgbot.services.account_utils import WorkWeekMixin
 
 
@@ -85,8 +87,15 @@ class Promoter(WorkWeekMixin):
     async def send_notification(self):
         pass
 
-    async def get_sales(self):
-        pass
+    async def get_sales(
+        self, start_date: datetime, end_date: datetime = None
+    ) -> List[SaleEntry]:
+        sales: List[SaleEntry] = await self._sale_base.get_sales_by_promoter(
+            vr_code=await self.get_vr_code(),
+            start_date=start_date,
+            end_date=end_date
+        )
+        return sales
 
     async def get_this_week_sales(self) -> List[SaleEntry]:
         """Возвращает продажи за последнюю неделю. С момента дня выплат.
@@ -94,12 +103,66 @@ class Promoter(WorkWeekMixin):
         Returns:
             List[SaleEntry]: []
         """
-        sales: List[SaleEntry] = await self._sale_base.get_sales_by_promoter(
-            vr_code=await self.get_vr_code(),
+        sales: List[SaleEntry] = await self.get_sales(
             start_date=self.get_first_day_of_week(),
             end_date=self.get_today()
         )
         return sales
+
+    async def get_last_week_sales(self) -> List[SaleEntry]:
+        first_day = self.get_first_day_of_week()
+        start_date = first_day - timedelta(days=7)
+        end_date = first_day - timedelta(days=1)
+        sales: List[SaleEntry] = await self.get_sales(
+            start_date=start_date,
+            end_date=end_date
+        )
+        return sales
+
+    async def get_sold_tickets(
+        self,
+        start_date: datetime,
+        end_date: datetime = None,
+    ) -> dict:
+        """возвращает словарь дата - список билетов
+
+        Returns:
+            dict: {date: List[Ticket], ... }
+        """
+        sales: List[SaleEntry] = await self.get_sales(
+            start_date=start_date,
+            end_date=end_date
+        )
+        if not end_date:
+            end_date = start_date
+        delta = end_date - start_date
+        result = {
+            (start_date+timedelta(days=i)).date(): []
+            for i in range(delta.days + 1)
+        }
+        for sale in sales:
+            date = sale.sale_time.date()
+            tickets = await entry_to_tickets(sale)
+            result[date].append(tickets)
+
+        return result
+
+    async def get_this_week_sold_tickets(self) -> dict:
+        sold_tickets = await self.get_sold_tickets(
+            start_date=self.get_first_day_of_week(),
+            end_date=self.get_today()
+        )
+        return sold_tickets
+
+    async def get_last_week_sold_tickets(self) -> dict:
+        first_day = self.get_first_day_of_week()
+        start_date = first_day - timedelta(days=7)
+        end_date = first_day - timedelta(days=1)
+        sold_tickets = await self.get_sold_tickets(
+            start_date=start_date,
+            end_date=end_date
+        )
+        return sold_tickets
 
     async def get_count_of_sales(
         self, start_date: datetime, end_date: datetime = None

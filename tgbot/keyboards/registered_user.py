@@ -21,10 +21,10 @@ def manager_markup() -> ReplyKeyboardMarkup:
         resize_keyboard=True,
         keyboard=[
             [
-                KeyboardButton('Продажи моей команды сегодня')
+                KeyboardButton('Продажи моей команды')
             ],
             [
-                KeyboardButton('Продажи моей команды за неделю')
+                KeyboardButton('Посчитать мое вознаграждение менеджера')
             ],
         ]
     )

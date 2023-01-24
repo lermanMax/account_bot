@@ -6,7 +6,7 @@ from config import TG_ADMINS_ID
 
 
 class SaleNotice(BaseModel):
-    sale_id: int
+    sale_id: str
     sale_time: str
     sale_sum: float
     vr_code: str
@@ -14,14 +14,20 @@ class SaleNotice(BaseModel):
 
 
 class ReturnNotice(BaseModel):
-    sale_id: int
+    sale_id: str
     sale_time: str
     sale_sum: float
     vr_code: str
     saler: str
+    return_time: str
+    reason_for_return: str
+    description: str
 
 
-bot_api = FastAPI()
+bot_api = FastAPI(
+    title='Личный Кабинет BotAPI',
+    description='Эндпойтны для отправки уведомлений Промоутерам и Менеджерам'
+)
 
 
 @bot_api.get('/ping')
@@ -58,6 +64,10 @@ async def notification_of_return(tg_id: int, notice_msg: ReturnNotice):
         f'№{notice_msg.sale_id} от {notice_msg.sale_time} \n'
         f'оплачен на сумму {notice_msg.sale_sum} \n'
         f'через {notice_msg.vr_code} {notice_msg.saler}\n'
+        '\n'
+        f'Время возврата: {notice_msg.return_time}\n'
+        f'Причина: {notice_msg.reason_for_return}\n'
+        f'Подробности: {notice_msg.description}\n'
     )
     TGBot.send_message(
             user_id=tg_id,

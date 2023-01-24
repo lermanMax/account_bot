@@ -1,10 +1,10 @@
 from __future__ import annotations
 import asyncio
-from typing import List, Dict
+from typing import List, Dict, Tuple
 from datetime import datetime, timedelta
 from loguru import logger
 
-from tgbot.interfaces.connector_sales_base import ConnectorSalesBase, SaleEntry
+from tgbot.interfaces.connector_sales_base import ConnectorSalesBase
 from tgbot.interfaces.connector_bitrix import ConnectorBitrix
 from tgbot.services.account_utils import WorkWeekMixin
 from tgbot.services.account_promoter import Promoter
@@ -93,7 +93,7 @@ class Manager(WorkWeekMixin):
                 promoter_dict.get(ConnectorBitrix.REF_CODE))
         return vr_list
 
-    async def get_promoters(self) -> List:
+    async def get_promoters(self) -> List[Promoter]:
         """Получить промоутеров этого менеджера
 
         Returns:
@@ -105,64 +105,54 @@ class Manager(WorkWeekMixin):
         promoters = await asyncio.gather(*tasks)
         return promoters
 
-    async def get_count_of_sales(
+    async def get_sales_of_team(
         self, start_date: datetime, end_date: datetime
-    ):
-        """Возвращает количесво продаж команды менеджера
+    ) -> List[Tuple]:
+        """Возвращает продажи команды менеджера. По каждому промоутеру
 
         Args:
             start_date (datetime): _description_
             end_date (datetime): _description_
 
         Returns:
-            dict: {date: count, date: count, }
-        """
-        all_sales: List[SaleEntry] = await self._sale_base.get_all_sales(
-            start_date=start_date,
-            end_date=end_date
-        )
-        vr_list = await self.get_vr_list_promoters()
-        sales = [entry for entry in all_sales if entry.vr_code in vr_list]
-
-        delta = end_date - start_date
-        count_dict = {
-            (start_date+timedelta(days=i)).date(): 0
-            for i in range(delta.days + 1)
-        }
-        for sale in sales:
-            count_dict[sale.sale_time.date()] += sale.count
-        return count_dict
-
-    async def get_sales_by_every_promoter(self) -> List:
-        """Получить количество продаж по каждому промоутеру
-
-        Returns:
-            List: [ (Promoter, count), ... ]
+            List: [
+                (Promoter, { date: List[Ticket] } ),
+                ...
+            ]
         """
         promoters = await self.get_promoters()
-        day = datetime.today()
 
-        async def make_tuple(promoter):
-            sales_dict = await promoter.get_count_of_sales(start_date=day)
-            return (promoter, sales_dict[day.date()])
+        async def make_tuple(promoter: Promoter):
+            tickets_dict = await promoter.get_sold_tickets(
+                start_date=start_date,
+                end_date=end_date
+            )
+            return (promoter, tickets_dict)
 
         tasks = [make_tuple(promoter) for promoter in promoters]
         result_list = await asyncio.gather(*tasks)
 
         return result_list
 
-    async def get_count_of_sales_on_this_week(self) -> Dict:
-        count_dict = await self.get_count_of_sales(
+    async def get_sales_of_team_on_this_week(self) -> List[Tuple]:
+        """
+        Returns:
+            List: [
+                (Promoter, { date: List[Ticket] } ),
+                ...
+            ]
+        """
+        result_list = await self.get_sales_of_team(
             start_date=self.get_first_day_of_week(),
             end_date=self.get_today()
         )
-        return count_dict
+        return result_list
 
-    async def get_count_of_sales_on_last_week(self) -> Dict:
+    async def get_sales_of_team_on_last_week(self) -> Dict:
         first_day = self.get_first_day_of_week()
         start_date = first_day - timedelta(days=7)
         end_date = first_day - timedelta(days=1)
-        count_dict = await self.get_count_of_sales(
+        count_dict = await self.get_sales_of_team(
             start_date=start_date,
             end_date=end_date
         )

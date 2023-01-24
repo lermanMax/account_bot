@@ -1,13 +1,13 @@
 from typing import List
 import itertools
 
-from connector_sales_base import SaleEntry, Ticket
+from tgbot.interfaces.connector_sales_base import SaleEntry, Ticket
 import tgbot.services.salary_calculator.salary_rates as salary_rates
 
 ticket_prices = list(salary_rates.DISCOUNT_PRICE_COEFFICIENT.keys())
 
 
-def entry_to_tickets(entry: SaleEntry) -> List[Ticket]:
+async def entry_to_tickets(entry: SaleEntry) -> List[Ticket]:
     count = entry.count
 
     if count == 1:
