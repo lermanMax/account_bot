@@ -6,10 +6,14 @@ def promoter_markup() -> ReplyKeyboardMarkup:
         resize_keyboard=True,
         keyboard=[
             [
-                KeyboardButton('Мои продажи')
+                KeyboardButton('Мои продажи'),
             ],
             [
-                KeyboardButton('Мои продажи на прошлой неделе')
+                KeyboardButton('Мои продажи на прошлой неделе'),
+            ],
+            [
+                KeyboardButton('❓ FAQ'),
+                KeyboardButton('💬 Поддержка')
             ],
         ]
     )
@@ -21,10 +25,18 @@ def manager_markup() -> ReplyKeyboardMarkup:
         resize_keyboard=True,
         keyboard=[
             [
-                KeyboardButton('Продажи моей команды')
+                KeyboardButton('Продажи моей команды'),
             ],
             [
-                KeyboardButton('Посчитать мое вознаграждение менеджера')
+                KeyboardButton('Посчитать мое вознаграждение менеджера'),
+            ],
+            [
+                KeyboardButton('Моя команда'),
+                KeyboardButton('Мои продажи'),
+            ],
+            [
+                KeyboardButton('❓ FAQ'),
+                KeyboardButton('💬 Поддержка')
             ],
         ]
     )
