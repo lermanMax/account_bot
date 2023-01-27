@@ -63,7 +63,7 @@ class ConnectorSalesBase:
         Returns:
             List[SaleEntry]:
         """
-        logger.info(f'{vr_code} {start_date} {end_date}')
+        logger.info(f'{vr_code} {start_date.date()} {end_date.date()}')
         if end_date is None:
             end_date = start_date
 
@@ -86,31 +86,35 @@ class ConnectorSalesBase:
         return [SaleEntry(*entry) for entry in sale_entries]
 
     async def get_all_sales(
-            self, start_date, end_date=None) -> List[SaleEntry]:
+        self, start_date, end_date=None, status='print'
+    ) -> List[SaleEntry]:
         """Get all sales for a set period of time (start & end date inclusively)
 
         Args:
             start_date (_type_): _description_
             end_date (_type_, optional): _description_. Defaults to None.
+            status: print, return
 
         Returns:
             List[SaleEntry]: _description_
         """
-        logger.info(f'{start_date} {end_date}')
+        logger.info(f'{status} {start_date.date()} {end_date.date()}')
         if end_date is None:
             end_date = start_date
 
-        cur = await self.conn.cursor()
+        async with self.pool.acquire() as conn:
+            cur = await conn.cursor()
 
-        select_script = '''
-            SELECT telegreen_id, order_status, telegreen_total_count,
-            telegreen_total_sum, telegreen_sname, telegreen_approved_date
-            FROM telegreen_direct_orders
-            WHERE CAST(telegreen_approved_date AS date)
-            BETWEEN CAST(%s AS date) AND CAST(%s AS date)
-            AND order_status = 'print';'''
+            select_script = '''
+                SELECT telegreen_id, order_status, telegreen_total_count,
+                telegreen_total_sum, telegreen_sname, telegreen_approved_date
+                FROM telegreen_direct_orders
+                WHERE CAST(telegreen_approved_date AS date)
+                BETWEEN CAST(%s AS date) AND CAST(%s AS date)
+                AND order_status = %s;'''
 
-        await cur.execute(select_script, (start_date, end_date))
-        sale_entries = await cur.fetchall()
-        await cur.close()
+            await cur.execute(select_script, (start_date, end_date, status))
+            sale_entries = await cur.fetchall()
+            await cur.close()
+
         return [SaleEntry(*entry) for entry in sale_entries]

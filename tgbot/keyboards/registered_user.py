@@ -32,6 +32,7 @@ def manager_markup() -> ReplyKeyboardMarkup:
             ],
             [
                 KeyboardButton('Моя команда'),
+                KeyboardButton('Возвраты моей команды'),
                 KeyboardButton('Мои продажи'),
             ],
             [

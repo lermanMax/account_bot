@@ -4,7 +4,7 @@ from typing import List, Dict, Tuple
 from datetime import datetime, timedelta
 from loguru import logger
 
-from tgbot.interfaces.connector_sales_base import ConnectorSalesBase
+from tgbot.interfaces.connector_sales_base import ConnectorSalesBase, SaleEntry
 from tgbot.interfaces.connector_bitrix import ConnectorBitrix
 from tgbot.services.account_utils import WorkWeekMixin
 from tgbot.services.account_promoter import Promoter
@@ -157,6 +157,19 @@ class Manager(WorkWeekMixin):
             end_date=end_date
         )
         return count_dict
+
+    async def get_returned_sales_of_team_on_this_week(self) -> List[SaleEntry]:
+        """_summary_
+
+        Returns:
+            List[SaleEntry]: _description_
+        """
+        result_list: List[SaleEntry] = await self._sale_base.get_all_sales(
+            start_date=self.get_first_day_of_week(),
+            end_date=self.get_today(),
+            status='return'
+        )
+        return result_list
 
 
 async def example():

@@ -7,6 +7,8 @@ from tgbot.config import BITRIX_WEBHOOK
 from tgbot.interfaces.connector_sales_base import ConnectorSalesBase
 from tgbot.config import SALES_DB_HOST, SALES_DB_PORT, SALES_DB_USER, \
     SALES_DB_PASS, SALES_DB_NAME
+from tgbot.utils.broadcast import send_messages
+from tgbot.config import TG_ADMINS_ID
 
 
 async def setup_default_commands(dp: Dispatcher):
@@ -39,6 +41,8 @@ async def on_startup_polling(dp: Dispatcher):
         db=SALES_DB_NAME
     )
 
+    
+
 
 async def on_shutdown(dp: Dispatcher):
     logger.info('Shutdown')
@@ -58,6 +62,7 @@ def polling(skip_updates: bool = False):
         on_startup=on_startup_polling,
         on_shutdown=on_shutdown
     )
+    send_messages(TG_ADMINS_ID, 'startup')
 
 
 if __name__ == '__main__':

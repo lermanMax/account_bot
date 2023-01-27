@@ -92,3 +92,25 @@ async def get_team(
         text += line
 
     await answer_message.edit_text(text)
+
+
+@dp.message_handler(
+    Text(equals='Возвраты моей команды'),
+    IsManagerUserFilter())
+async def get_today_team_returned_sales(
+        message: types.Message, promoter: Promoter, manager: Manager):
+    logger.info(f'manager: {await manager.get_vr_code()}')
+    answer_message = await message.answer(text='Загружаю ...')
+
+    sales_list = await manager.get_returned_sales_of_team_on_this_week()
+    vr_code = await manager.get_vr_code()
+    text = f'<b>{vr_code}</b>\nВозвраты вашей команды на этой неделе\n'
+    for sale in sales_list:
+        text += f'\nПроджа №{sale.green_id}\n' \
+                f'Билеты: {sale.count}шт. {sale.full_sum}руб\n' \
+                f'Дата: {sale.sale_time}\n' \
+                f'Промоутер: <code>{sale.vr_code}</code>\n'
+    else:
+        text += 'возвратов на этой неделе нет'
+
+    await answer_message.edit_text(text)
