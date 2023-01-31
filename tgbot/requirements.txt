@@ -3,3 +3,4 @@ requests==2.25.1
 aiogram==2.19
 fast-bitrix24==1.5.12
 aiomysql==0.1.1
+pygsheets==2.0.6
