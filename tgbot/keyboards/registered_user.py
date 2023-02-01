@@ -26,6 +26,7 @@ def manager_markup() -> ReplyKeyboardMarkup:
         keyboard=[
             [
                 KeyboardButton('Продажи моей команды'),
+                KeyboardButton('Мой План'),
             ],
             [
                 KeyboardButton('Посчитать мое вознаграждение менеджера'),

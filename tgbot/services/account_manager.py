@@ -6,12 +6,14 @@ from loguru import logger
 
 from tgbot.interfaces.connector_sales_base import ConnectorSalesBase, SaleEntry
 from tgbot.interfaces.connector_bitrix import ConnectorBitrix
+from tgbot.interfaces.connector_gs_plan import PlanSheet
 from tgbot.services.account_utils import WorkWeekMixin
 from tgbot.services.account_promoter import Promoter
 
 
 class Manager(WorkWeekMixin):
     _sale_base: ConnectorSalesBase = ConnectorSalesBase()
+    _plan_sheet: PlanSheet = PlanSheet()
     _instanse_cache = {}
 
     @classmethod
@@ -31,6 +33,7 @@ class Manager(WorkWeekMixin):
         self._tg_id: str = tg_id
         self._vr_code: str = manager_dict.get(ConnectorBitrix.REF_CODE)
         self._manager_id: str = manager_dict.get(ConnectorBitrix.MANAGER_ID)
+        self._promoter: Promoter = await Promoter.get_by_vr(self._vr_code)
         logger.info(f'manager {self._vr_code} was created')
         return self
 
@@ -64,7 +67,7 @@ class Manager(WorkWeekMixin):
         return self._vr_code
 
     async def get_city(self) -> str:
-        return self._city
+        return await self._promoter.get_city()
 
     async def get_tg_id(self) -> str:
         return self._tg_id
@@ -73,7 +76,7 @@ class Manager(WorkWeekMixin):
         return self._manager_id
 
     async def is_region(self) -> bool:
-        if self._city == 'Санкт-Петербург':
+        if self._promoter.get_city() == 'Санкт-Петербург':
             return False
         else:
             return True
@@ -170,6 +173,44 @@ class Manager(WorkWeekMixin):
             status='return'
         )
         return result_list
+
+    async def get_plan(
+        self, start_date: datetime, end_date: datetime = None
+    ) -> dict:
+        """Возвращает план по дням
+
+        Args:
+            start_date (datetime): _description_
+            end_date (datetime, optional): _description_. Defaults to None.
+
+        Returns:
+            dict[]: {date: float}
+        """
+        plan = self._plan_sheet.get_manager_plan(
+            city_name=await self.get_city(),
+            start_date=start_date.date(),
+            end_date=end_date.date()
+        )
+        if not end_date:
+            end_date = start_date
+        delta = end_date - start_date
+        result = {
+            (start_date+timedelta(days=i)).date(): plan[i]
+            for i in range(delta.days + 1)
+        }
+
+        return result
+
+    async def get_plan_on_this_week(self) -> dict:
+        """Возвращает план по дням
+        Returns:
+            dict: {date: float, }
+        """
+        result = await self.get_plan(
+            start_date=self.get_first_day_of_week(),
+            end_date=self.get_last_day_of_week()
+        )
+        return result
 
 
 async def example():

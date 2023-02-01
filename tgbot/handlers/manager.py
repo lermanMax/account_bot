@@ -75,6 +75,24 @@ async def get_manager_salary(
 
 
 @dp.message_handler(
+    Text(equals='Мой План'),
+    IsManagerUserFilter())
+async def get_plan(
+        message: types.Message, promoter: Promoter, manager: Manager):
+    logger.info(f'manager: {await manager.get_vr_code()}')
+    answer_message = await message.answer(text='Загружаю ...')
+
+    plan = await manager.get_plan_on_this_week()
+    vr_code = await manager.get_vr_code()
+    text = f'<b>{vr_code}</b>\nПлан на эту неделю\n\n'
+    for date, tickets in plan.items():
+        text += f'{date}: <b>{tickets}</b>\n'
+    text += f'\nИтог: {sum(plan.values())}'
+    await answer_message.delete()
+    await message.answer(text=text, reply_markup=manager_keyboard)
+
+
+@dp.message_handler(
     Text(equals='Моя команда'), IsManagerUserFilter())
 async def get_team(
         message: types.Message, promoter: Promoter, manager: Manager):

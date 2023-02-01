@@ -1,12 +1,15 @@
 from aiogram import Dispatcher
 from aiogram import executor, types
 from loguru import logger
+import os
 
 from tgbot.interfaces.connector_bitrix import ConnectorBitrix
 from tgbot.config import BITRIX_WEBHOOK
 from tgbot.interfaces.connector_sales_base import ConnectorSalesBase
 from tgbot.config import SALES_DB_HOST, SALES_DB_PORT, SALES_DB_USER, \
     SALES_DB_PASS, SALES_DB_NAME
+from tgbot.interfaces.connector_gs_plan import PlanSheet
+from tgbot.config import GSHEET_LINK, GSHEET_SERVICE_FILE
 from tgbot.utils.broadcast import send_messages
 from tgbot.config import TG_ADMINS_ID
 
@@ -41,7 +44,14 @@ async def on_startup_polling(dp: Dispatcher):
         db=SALES_DB_NAME
     )
 
-    
+    dp.gs_plan_interface = PlanSheet()
+    path = f'{os.getcwd()}/tgbot/{GSHEET_SERVICE_FILE}'
+    dp.gs_plan_interface.setup(
+        gs_url=GSHEET_LINK,
+        gs_service_file=path,
+    )
+
+    await send_messages(TG_ADMINS_ID, 'startup')
 
 
 async def on_shutdown(dp: Dispatcher):
@@ -62,7 +72,6 @@ def polling(skip_updates: bool = False):
         on_startup=on_startup_polling,
         on_shutdown=on_shutdown
     )
-    send_messages(TG_ADMINS_ID, 'startup')
 
 
 if __name__ == '__main__':

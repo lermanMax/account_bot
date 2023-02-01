@@ -16,6 +16,11 @@ class WorkWeekMixin:
         return date_firs_day
 
     @classmethod
+    def get_last_day_of_week(cls) -> datetime:
+        date_last_day = cls.get_first_day_of_week() + timedelta(days=7)
+        return date_last_day
+
+    @classmethod
     def get_today(cls) -> datetime:
         today = datetime.today()
         return today
