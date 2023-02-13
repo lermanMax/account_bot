@@ -1,6 +1,6 @@
 from aiogram import Bot, Dispatcher, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+#from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from tgbot.config import TGBOT_TOKEN
 
@@ -15,5 +15,5 @@ dp = Dispatcher(bot, storage=storage)
 # from tgbot import middlewares
 
 # Setup scheduler
-scheduler = AsyncIOScheduler()
-scheduler.start()
+#scheduler = AsyncIOScheduler()
+#scheduler.start()

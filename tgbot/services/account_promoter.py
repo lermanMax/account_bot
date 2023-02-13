@@ -45,6 +45,7 @@ class Promoter(WorkWeekMixin):
         self._last_name: str = promoter_dict.get(ConnectorBitrix.LAST_NAME)
         self._name: str = promoter_dict.get(ConnectorBitrix.NAME)
         self._second_name: str = promoter_dict.get(ConnectorBitrix.SECOND_NAME)
+        self._partner_type: str = promoter_dict.get(ConnectorBitrix.PARTNER_TYPE)
         logger.info(f'Promoter {self._vr_code} was created')
         return self
 
@@ -83,6 +84,9 @@ class Promoter(WorkWeekMixin):
             return False
         else:
             return True
+    
+    async def get_partner_type(self) -> str:
+        return self._partner_type
 
     async def send_notification(self):
         pass

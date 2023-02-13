@@ -9,6 +9,7 @@ from tgbot.services.account_promoter import Promoter
 from tgbot.services.account_manager import Manager
 from tgbot.utils.broadcast import send_messages
 from tgbot.config import TG_ADMINS_ID
+from tgbot.handlers.start import request_phone
 
 
 class AccessMiddleware(BaseMiddleware):
@@ -36,8 +37,9 @@ class AccessMiddleware(BaseMiddleware):
             logger.info(f'promoter: {await promoter.get_vr_code()}')
             data['promoter'] = promoter
         else:
-            await message.answer('Пройдите регистрацию')
-            CancelHandler()
+            await load_answer.delete()
+            data['promoter'] = None
+            data['manager'] = None
             return
 
         try:

@@ -59,6 +59,7 @@ class ConnectorBitrix:
     CONF_ACCEPT = 'CONF_ACCEPT'
     # Условия выплаты партнёрского вознаграждения
     PARTNER_PRIZE_ACCEPT = 'PARTNER_PRIZE_ACCEPT'
+    PARTNER_TYPE = 'PARTNER_TYPE'
 
     # Перевод названия полей для лидов (с человеческого на битриксойдный)
     field_lead = {
@@ -72,6 +73,7 @@ class ConnectorBitrix:
         ENTRY_DATE: 'UF_CRM_1670586695',
         INVITER_VR: 'UF_CRM_1670586181',
         TRAFIC_SOURCE: 'UF_CRM_1670586226',
+        PARTNER_TYPE: 'uf_crm_promtype',
     }
 
     # Перевод полей для сделок
@@ -93,6 +95,7 @@ class ConnectorBitrix:
         ENTRY_DATE: 'UF_CRM_63932154A4E50',
         INVITER_VR: 'UF_CRM_63931F5A9327E',
         TRAFIC_SOURCE: 'UF_CRM_63931FB7819D1',
+        PARTNER_TYPE: 'UF_CRM_63E0F1ACE29B9',
     }
 
     # Перевод полей для контакта
@@ -125,7 +128,8 @@ class ConnectorBitrix:
 
     # Поля которые надо вернуть по промоутеру
     fields_for_promoter = [
-        REF_CODE, TG_ID, CITY, MANAGER_ID, RSCHET, NAME, SECOND_NAME, LAST_NAME]
+        REF_CODE, TG_ID, CITY, MANAGER_ID, RSCHET, NAME, SECOND_NAME, 
+        LAST_NAME, PARTNER_TYPE]
 
     # Поля которые надо вернуть по менеджеру
     fields_for_manager = [
@@ -160,7 +164,6 @@ class ConnectorBitrix:
 
     def __init__(self):
         """Возвращает обект класса ConnectorBitrix"""
-        pass
 
     async def _get_fields(self):
         all_fields: list = await self.bitx.get_all(
@@ -453,6 +456,32 @@ class ConnectorBitrix:
             raise EmployeeDoesNotExist
         elif len(all_deals) > 1:
             raise DatabaseError
+    
+    async def update_tg_id_by_phone(self, phone: str, tg_id: str, ) -> dict:
+        """Обновить поле tg_id у промоутра. С проверками
+
+        Args:
+            deal_id (str): _description_
+            tg_id (str): telegram id, None - если нужно стереть
+        """
+        promoter = await self._get_promoter_by_phone(phone)
+
+        tg_id_from_contact = promoter.get(self.field_deal.get('TG_ID'))
+        if tg_id_from_contact:
+            if tg_id_from_contact == tg_id:
+                logger.warning(
+                    f'EmployeeAlreadyExist tg={tg_id} phone={phone}')
+                raise EmployeeAlreadyExist
+            else:
+                raise PhoneAlreadyTaken
+
+        await self._update_tg_id(
+            deal_id=promoter.get('ID'),
+            tg_id=tg_id
+        )
+        
+        return promoter
+
 
     async def add_promoter(
         self,
@@ -481,26 +510,14 @@ class ConnectorBitrix:
         """
         logger.info(f'tg={tg_id} phone={phone}')
         try:
-            promoter = await self._get_promoter_by_phone(phone)
+            promoter = await self.update_tg_id_by_phone(phone, tg_id)
+            #if socssesfuly -> promoter already exists
         except EmployeeDoesNotExist:
             promoter = None
 
         if promoter:
-            tg_id_from_contact = promoter.get(self.field_deal.get('TG_ID'))
-            if tg_id_from_contact:
-                if tg_id_from_contact == tg_id:
-                    logger.warning(
-                        f'EmployeeAlreadyExist tg={tg_id} phone={phone}')
-                    raise EmployeeAlreadyExist
-                else:
-                    raise PhoneAlreadyTaken
-            else:
-                await self._update_tg_id(
-                    deal_id=promoter.get('ID'),
-                    tg_id=tg_id
-                )
-                raise EmployeeAlreadyExist
-
+            raise EmployeeAlreadyExist
+                
         try:
             promoter_lead = await self._get_lead(tg_id=tg_id)
         except EmployeeDoesNotExist:
