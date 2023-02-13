@@ -3,3 +3,6 @@ pydantic==1.10.2
 loguru==0.6.0
 requests==2.25.1
 uvicorn==0.20.0
+aiogram==2.19
+python-multipart==0.0.5
+

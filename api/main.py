@@ -1,8 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, File, UploadFile
 from pydantic import BaseModel
 
-from tg_bot import TGBot
-from config import TG_ADMINS_ID
+from broadcast import send_messages, send_photo, send_messages_to_admins
 
 
 class SaleNotice(BaseModel):
@@ -33,11 +32,9 @@ bot_api = FastAPI(
 @bot_api.get('/ping')
 async def ping_admin():
     """Проверка работы апи. Отправляет уведомление админам бота"""
-    for admin_id in TG_ADMINS_ID:
-        TGBot.send_message(
-            user_id=admin_id,
-            message='api ping',
-        )
+    await send_messages_to_admins(
+        message='api ping',
+    )
     return
 
 
@@ -49,7 +46,7 @@ async def notification_of_sale(tg_id: int, notice_msg: SaleNotice):
         f'оплачен на сумму {notice_msg.sale_sum} \n'
         f'через {notice_msg.vr_code} {notice_msg.saler}\n'
     )
-    TGBot.send_message(
+    await send_messages(
             user_id=tg_id,
             message=message,
         )
@@ -69,8 +66,32 @@ async def notification_of_return(tg_id: int, notice_msg: ReturnNotice):
         f'Причина: {notice_msg.reason_for_return}\n'
         f'Подробности: {notice_msg.description}\n'
     )
-    TGBot.send_message(
+    await send_messages(
             user_id=tg_id,
             message=message,
         )
     return {"message": message}
+
+
+@bot_api.post('/notice-of-activation/{tg_id}')
+async def notification_of_activation(tg_id: int):
+    """Отправляет уведомление о активации"""
+    message = (
+        f'Ваш аккаунт активирован',
+    )
+    await send_messages(
+            user_id=tg_id,
+            message=message,
+        )
+    return {"message": message}
+
+
+@bot_api.post('/send-qr/{tg_id}')
+async def send_qr(tg_id: int, photo: UploadFile = File(...)):
+    """Отправляет изображение"""
+    await send_photo(
+            users_id=tg_id,
+            message=f'Ваш QR-код',
+            photo=await file.read(),
+        )
+    return {"message": f'Отправлено изображение {file.filename}'}
