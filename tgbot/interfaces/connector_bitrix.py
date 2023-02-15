@@ -60,6 +60,18 @@ class ConnectorBitrix:
     # Условия выплаты партнёрского вознаграждения
     PARTNER_PRIZE_ACCEPT = 'PARTNER_PRIZE_ACCEPT'
     PARTNER_TYPE = 'PARTNER_TYPE'
+    STAGE_ID = 'STAGE_ID'
+
+    # Стадии в воронке сделок
+    STAGE_NEW = 'C59:NEW' # Новая
+    STAGE_ACTIVATE = 'C59:UC_R6V6SS' # Активировать
+    STAGE_ACTIVATED = 'C59:UC_YF7CJP' # Успешно активирован
+    STAGE_READED = 'C59:UC_6TGH4Y' # Письмо прочитано
+    STAGE_INTERN_PASSED = 'C59:UC_JQYP7W' # Стажировка пройдена
+    STAGE_DATA_RECEIVED = 'C59:UC_UVNDY2' # Данные получены
+    STAGE_DATA_VERIFIED = 'C59:UC_96C1Y6' # Данные проверены
+    STAGE_SUCCESS_ARCHIVE = 'C59:WON' # Успешные, архив
+    STAGE_RETRIEVED = 'C59:UC_SBZ0UD' # Выбыл
 
     # Перевод названия полей для лидов (с человеческого на битриксойдный)
     field_lead = {
@@ -96,6 +108,7 @@ class ConnectorBitrix:
         INVITER_VR: 'UF_CRM_63931F5A9327E',
         TRAFIC_SOURCE: 'UF_CRM_63931FB7819D1',
         PARTNER_TYPE: 'UF_CRM_63E0F1ACE29B9',
+        STAGE_ID: 'STAGE_ID'
     }
 
     # Перевод полей для контакта
@@ -129,7 +142,7 @@ class ConnectorBitrix:
     # Поля которые надо вернуть по промоутеру
     fields_for_promoter = [
         REF_CODE, TG_ID, CITY, MANAGER_ID, RSCHET, NAME, SECOND_NAME, 
-        LAST_NAME, PARTNER_TYPE]
+        LAST_NAME, PARTNER_TYPE, STAGE_ID]
 
     # Поля которые надо вернуть по менеджеру
     fields_for_manager = [
@@ -619,6 +632,9 @@ class ConnectorBitrix:
 
         # проверка что все поля заполнены = стажер стал промоутером
         if not promoter[self.RSCHET]:
+            raise EmployeeDoesNotExist
+        # проверка что не Выбыл
+        if promoter[self.STAGE_ID] == self.STAGE_RETRIEVED:
             raise EmployeeDoesNotExist
 
         contact_id = dict_deal.get('CONTACT_ID')
