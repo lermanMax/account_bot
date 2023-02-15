@@ -92,6 +92,6 @@ async def send_qr(tg_id: int, photo: UploadFile = File(...)):
     await send_photo(
             users_id=tg_id,
             message=f'Ваш QR-код',
-            photo=await file.read(),
+            photo=await photo.read(),
         )
-    return {"message": f'Отправлено изображение {file.filename}'}
+    return {"message": f'Отправлено изображение {photo.filename}'}
