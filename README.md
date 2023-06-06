@@ -1,3 +1,3 @@
 # account_bot
 
-A personal office for employees of the sales department. Through it you can check the number of your sales for different periods and calculate remuneration. 
+A personal account for a sales department employees. An employee can check the number of their sales for different periods of time and calculate the remuneration. 
